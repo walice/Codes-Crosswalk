@@ -1,11 +1,12 @@
 #setwd("C:/Users/Alice/Box Sync/PhD/Software/Codes-Masterlist") # Laptop
 setwd("C:/boxsync/alepissier/PhD/Software/Codes-Masterlist") # Bren
-library(openxlsx)
 library(tidyverse)
 library(readxl)
+library(openxlsx)
 
 # Import three sheets
-codes <- read_xlsx("Codes_Masterlist.xlsx", sheet = "Codes")
+codes <- read_xlsx("Codes_Masterlist.xlsx", sheet = "Codes") %>%
+  select(-c(WB_Other, WB_Lending_Category))
 regional <- read_xlsx("Codes_Masterlist.xlsx", 
                       sheet = "UN_Regional_Groupings")
 wb <- read_xlsx("Codes_Masterlist.xlsx", 
@@ -31,16 +32,33 @@ codes <- left_join(codes, WB %>% select(ISO3166.3, WB_Lending_Category, WB_Other
 codes %>% filter(codes$WB_Income_Group_Code != WB_Income_Group_Code2) %>% nrow
 codes$WB_Income_Group_Code2 <- NULL
 
+codes <- codes %>%
+  mutate_at(c("UN_Sub-region_Code", "UN_Intermediate_Region_Code", "UN_M49_Code", 
+              "UN_LDC", "UN_LLDC", "UN_SIDS", "IMF_Code", 
+              "OECD", "EU28", "Arab League"),
+            as.numeric)
+regional <- regional %>%
+  mutate_at(c("UN_Region_Code", "UN_Sub-region_Code", "UN_Intermediate_Region_Code"),
+            as.numeric)
+
+codes <- codes %>%
+  select(ISO3166.3, ISO3166.2, Country,
+         UN_Region, UN_Region_Code, `UN_Sub-region`, `UN_Sub-region_Code`, UN_Intermediate_Region, UN_Intermediate_Region_Code,
+         UN_M49_Code, UN_LDC, UN_LLDC, UN_SIDS, `UN_Developing-Developed`, IMF_Code,
+         WB_Income_Group_Code, WB_Region, WB_Lending_Category, WB_Other,
+         OECD, EU28, `Arab League`, Longitude, Latitude)
+codes <- codes %>%
+  arrange(ISO3166.3)
+
 book <- createWorkbook()
 hs <- createStyle(textDecoration = "Bold")
 addWorksheet(book, "Codes")
-writeData(book, sheet = "Codes", x = codes, headerStyle = hs)
+writeData(book, sheet = "Codes", 
+          x = codes, headerStyle = hs)
 addWorksheet(book, "UN_Regional_Groupings")
-writeData(book, sheet = "UN_Regional_Groupings", x = regional, headerStyle = hs)
+writeData(book, sheet = "UN_Regional_Groupings", 
+          x = regional, headerStyle = hs)
 addWorksheet(book, "World_Bank_Groupings")
-writeData(book, sheet = "World_Bank_Groupings", x = wb, headerStyle = hs)
-setColWidths(book, sheet = "Codes", cols = 1:ncol(codes), widths = "auto")
-setColWidths(book, sheet = "UN_Regional_Groupings", cols = 1:ncol(regional), widths = "auto")
-setColWidths(book, sheet = "World_Bank_Groupings", cols = 1:ncol(wb), widths = "auto")
-
+writeData(book, sheet = "World_Bank_Groupings", 
+          x = wb, headerStyle = hs)
 saveWorkbook(book, "Codes_Masterlist.xlsx", overwrite = TRUE)
