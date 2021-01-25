@@ -123,6 +123,7 @@ wb <- read_xlsx("Codes_Masterlist.xlsx",
 data(countryref)
 
 codes <- left_join(codes, countryref %>%
+                     distinct(iso3, .keep_all = TRUE) %>%
                      select(iso3, Centroid_Longitude = centroid.lon, Centroid_Latitude = centroid.lat),
                    by = c("ISO3166.3" = "iso3"))
 

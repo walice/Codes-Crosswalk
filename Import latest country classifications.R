@@ -30,8 +30,7 @@ library(tidyverse)
 # IMPORT EXISTING SHEETS    ####
 ## ## ## ## ## ## ## ## ## ## ##
 
-codes <- read_xlsx("Codes_Masterlist.xlsx", sheet = "Codes") %>%
-  select(-c(WB_Other, WB_Lending_Category))
+codes <- read_xlsx("Codes_Masterlist.xlsx", sheet = "Codes")
 regional <- read_xlsx("Codes_Masterlist.xlsx", 
                       sheet = "UN_Regional_Groupings")
 wb <- read_xlsx("Codes_Masterlist.xlsx", 
@@ -138,8 +137,8 @@ WB <- read_xls("2020_World Bank.xls", skip = 4) %>%
   select(Country = Economy, 
          ISO3166.3 = Code, 
          New_WB_Income_Group = `Income group`,
-         WB_Lending_Category = `Lending category`, 
-         WB_Other = Other) %>%
+         New_WB_Lending_Category = `Lending category`, 
+         New_WB_Other = Other) %>%
   filter(Country != "x")
 
 WB <- WB %>%
@@ -151,7 +150,7 @@ WB <- WB %>%
 nogroup <- WB %>% filter(is.na(New_WB_Income_Group))
 
 codes <- left_join(codes, WB %>% 
-                     select(ISO3166.3, New_WB_Income_Group, WB_Lending_Category, WB_Other),
+                     select(ISO3166.3, New_WB_Income_Group, New_WB_Lending_Category, New_WB_Other),
                    by = c("ISO3166.3"))
 
 changed <- codes %>% 
@@ -159,9 +158,19 @@ changed <- codes %>%
   filter(WB_Income_Group != New_WB_Income_Group) %>% 
   arrange(Country)
 
+codes %>% 
+  select(Country, WB_Lending_Category, New_WB_Lending_Category) %>%
+  filter(WB_Lending_Category != New_WB_Lending_Category) %>% 
+  arrange(Country)
+
+codes %>% 
+  select(Country, WB_Other, New_WB_Other) %>%
+  filter(WB_Other != New_WB_Other) %>% 
+  arrange(Country)
+
 codes <- codes %>%
-  select(-WB_Income_Group) %>%
-  rename(WB_Income_Group = New_WB_Income_Group)
+  select(-c(WB_Income_Group, WB_Lending_Category, WB_Other))
+colnames(codes) <- gsub("New_", "", colnames(codes))
 
 
 
