@@ -43,23 +43,34 @@ wb <- read_xlsx("Codes_Masterlist.xlsx",
 # MERGE LATEST UNSD GROUPS  ####
 ## ## ## ## ## ## ## ## ## ## ##
 
-# 2020 classification
-UNSD <- read_xlsx("2020_UNSD.xlsx", sheet = "Sheet1") %>%
-  select(Country = `Country or Area`,
-         ISO3166.3 = `ISO-alpha3 Code`,
-         New_UN_LDC = `Least Developed Countries (LDC)`,
-         New_UN_LLDC = `Land Locked Developing Countries (LLDC)`,
-         New_UN_SIDS = `Small Island Developing States (SIDS)`,
-         `New_UN_Developing-Developed` = `Developed / Developing Countries`) %>%
+# Source: https://unstats.un.org/unsd/methodology/m49/
+
+# 2023 classification
+UNSD <- read_xlsx("2023_UNSD.xlsx", sheet = "Sheet1") %>%
+  select(Country = "Country or Area",
+         ISO3166.3 = "ISO-alpha3 Code",
+         New_UN_LDC = "Least Developed Countries (LDC)",
+         New_UN_LLDC = "Land Locked Developing Countries (LLDC)",
+         New_UN_SIDS = "Small Island Developing States (SIDS)") %>%
   mutate_at(c("New_UN_LDC", "New_UN_LLDC", "New_UN_SIDS"),
             ~ifelse(. == "x", 1, .)) %>%
   mutate_at(c("New_UN_LDC", "New_UN_LLDC", "New_UN_SIDS"),
             ~ifelse(is.na(.), 0, .))
 
+# As of 2021, UNSD removed the Developed/Developing classification from M49
+# Download May 2022 classification by UNSD
+dev <- read_xlsx("2022_UNSD_Developing-Developed.xlsx", sheet = "Distinction as of May 2022") %>%
+  select(ISO3166.3 = "ISO-alpha3 Code",
+         `New_UN_Developing-Developed` = `Developed / Developing regions`)
+
+UNSD <- left_join(UNSD, dev,
+                  by = c("ISO3166.3"))
+
 codes <- left_join(codes, UNSD %>% 
                      select(-Country),
                    by = c("ISO3166.3"))
 
+# Check which countries have changed classification
 codes %>% 
   select(Country,
          UN_LDC, New_UN_LDC) %>%
