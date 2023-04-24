@@ -11,6 +11,7 @@
 # Merge latest UNSD groups
 # Merge latest HDI groups
 # Merge latest World Bank groups
+# Latest developments
 # Create workbook
 
 
@@ -31,10 +32,10 @@ library(tidyverse)
 # IMPORT EXISTING SHEETS    ####
 ## ## ## ## ## ## ## ## ## ## ##
 
-codes <- read_xlsx("Codes_Masterlist.xlsx", sheet = "Codes")
-regional <- read_xlsx("Codes_Masterlist.xlsx", 
+codes <- read_xlsx("Codes_Crosswalk.xlsx", sheet = "Codes")
+regional <- read_xlsx("Codes_Crosswalk.xlsx", 
                       sheet = "UN_Regional_Groupings")
-wb <- read_xlsx("Codes_Masterlist.xlsx", 
+wb <- read_xlsx("Codes_Crosswalk.xlsx", 
                 sheet = "World_Bank_Groupings")
 
 
@@ -206,6 +207,16 @@ codes %>%
 codes <- codes %>%
   select(-c(WB_Income_Group, WB_Lending_Category, WB_Other))
 colnames(codes) <- gsub("New_", "", colnames(codes))
+
+
+
+## ## ## ## ## ## ## ## ## ## ## ## ##
+# LATEST DEVELOPMENTS             ####
+## ## ## ## ## ## ## ## ## ## ## ## ##
+
+# Costa Rica joined OECD in May 2021
+codes <- codes %>%
+  mutate(OECD = ifelse(ISO3166.3 == "CRI", 1, OECD))
 
 
 
