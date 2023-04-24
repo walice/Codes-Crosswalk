@@ -1,6 +1,7 @@
 # Import latest country classifications
 # Alice Lepissier
 # alice.lepissier@gmail.com
+# Last update April 2023
 
 ## ## ## ## ## ## ## ## ## ## ##
 # INDEX                     ####
@@ -132,41 +133,56 @@ codes <- codes %>%
 # MERGE LATEST WORLD BANK GROUPS  ####
 ## ## ## ## ## ## ## ## ## ## ## ## ##
 
-# June 2020 classification
-WB <- read_xls("2020_World Bank.xls", skip = 4) %>% 
+# Source: https://datahelpdesk.worldbank.org/knowledgebase/articles/906519-world-bank-country-and-lending-groups
+
+# 2022 classification
+WB <- read_excel("2022_World Bank.xlsx") %>% 
   select(Country = Economy, 
          ISO3166.3 = Code, 
-         New_WB_Income_Group = `Income group`,
-         New_WB_Lending_Category = `Lending category`, 
-         New_WB_Other = Other) %>%
-  filter(Country != "x")
+         New_WB_Income_Group = "Income group",
+         New_WB_Lending_Category = "Lending category", 
+         New_WB_Other = "Other (EMU or HIPC)",
+         Region) %>%
+  drop_na(Region)
 
 WB <- WB %>%
-  mutate(New_WB_Income_Group = ifelse(New_WB_Income_Group == "Low income", "LIC",
-                                      ifelse(New_WB_Income_Group == "Lower middle income", "LMC",
-                                             ifelse(New_WB_Income_Group == "Upper middle income", "UMC",
-                                                    ifelse(New_WB_Income_Group == "High income", "HIC", NA)))))
+  mutate(New_WB_Income_Group = case_when(New_WB_Income_Group == "Low income" ~ "LIC",
+                                         New_WB_Income_Group == "Lower middle income" ~ "LMC",
+                                         New_WB_Income_Group == "Upper middle income" ~ "UMC",
+                                         New_WB_Income_Group == "High income" ~ "HIC"))
 
-nogroup <- WB %>% filter(is.na(New_WB_Income_Group))
+# Check countries with no group
+WB %>% filter(is.na(New_WB_Income_Group))
 
-codes <- left_join(codes, WB %>% 
+# Venezuela has been temporarily unclassified by World Bank
+# Assign latest known classification
+WB <- WB %>% mutate(New_WB_Income_Group = ifelse(ISO3166.3 == "VEN", "UMC", New_WB_Income_Group))
+
+codes <- left_join(codes, 
+                   WB %>% 
                      select(ISO3166.3, New_WB_Income_Group, New_WB_Lending_Category, New_WB_Other),
                    by = c("ISO3166.3"))
 
-changed <- codes %>% 
+# Countries that have changed income group
+codes %>% 
   select(Country, WB_Income_Group, New_WB_Income_Group) %>%
   filter(WB_Income_Group != New_WB_Income_Group) %>% 
-  arrange(Country)
+  arrange(Country) %>%
+  distinct(Country, .keep_all = TRUE)
 
+# Countries that have changed lending category
 codes %>% 
   select(Country, WB_Lending_Category, New_WB_Lending_Category) %>%
   filter(WB_Lending_Category != New_WB_Lending_Category) %>% 
-  arrange(Country)
+  arrange(Country) %>%
+  distinct(Country, .keep_all = TRUE)
 
+# Countries that changed other category
 codes %>% 
   select(Country, WB_Other, New_WB_Other) %>%
   filter(WB_Other != New_WB_Other) %>% 
-  arrange(Country)
+  arrange(Country) %>%
+  distinct(Country, .keep_all = TRUE)
 
 codes <- codes %>%
   select(-c(WB_Income_Group, WB_Lending_Category, WB_Other))
