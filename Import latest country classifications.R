@@ -66,6 +66,9 @@ dev <- read_xlsx("2022_UNSD_Developing-Developed.xlsx", sheet = "Distinction as 
 UNSD <- left_join(UNSD, dev,
                   by = c("ISO3166.3"))
 
+# Check countries with no group
+UNSD %>% filter(is.na(`New_UN_Developing-Developed`))
+
 codes <- left_join(codes, UNSD %>% 
                      select(-Country),
                    by = c("ISO3166.3"))
@@ -105,19 +108,23 @@ colnames(codes) <- gsub("New_", "", colnames(codes))
 # MERGE LATEST HDI GROUPS   ####
 ## ## ## ## ## ## ## ## ## ## ##
 
-UNDP <- read_xlsx("2020_UNDP.xlsx", sheet = "Table 1", skip = 6) %>%
+# Source: https://hdr.undp.org/data-center/human-development-index#/indicies/HDI
+
+# 2022 classification
+UNDP <- read_xlsx("2022_UNDP.xlsx", sheet = "Table 1", skip = 6) %>%
   select(Country = ...2,
-         HDI = `2019...3`) %>%
+         HDI = `2021...3`) %>%
   mutate(HDI = as.numeric(HDI)) %>%
   filter(!is.na(HDI))
 
 UNDP <- UNDP %>%
-  mutate(New_UNDP_HDI_Group = ifelse(HDI < 0.550, "Lo HDI",
-                                     ifelse(HDI >= 0.550 & HDI <= 0.699, "Med HDI",
-                                            ifelse(HDI >= 0.700 & HDI <= 0.799, "Hi HDI",
-                                                   ifelse(HDI >= 0.800, "VHi HDI", NA)))))
+  mutate(New_UNDP_HDI_Group = case_when(HDI < 0.550 ~ "Lo HDI",
+                                        HDI >= 0.550 & HDI <= 0.699 ~ "Med HDI",
+                                        HDI >= 0.700 & HDI <= 0.799 ~ "Hi HDI",
+                                        HDI >= 0.800 ~ "VHi HDI"))
 
-nogroup <- UNDP %>% filter(is.na(New_UNDP_HDI_Group))
+# Check countries with no group
+UNDP %>% filter(is.na(New_UNDP_HDI_Group))
 
 UNDP <- left_join(UNDP, codes %>%
                     select(Country, ISO3166.3),
@@ -129,7 +136,8 @@ codes <- left_join(codes, UNDP %>%
                      filter(!is.na(ISO3166.3)),
                    by = c("ISO3166.3"))
 
-changed <- codes %>% 
+# Check which countries have changed classification
+codes %>% 
   select(Country, UNDP_HDI_Group, New_UNDP_HDI_Group) %>%
   filter(UNDP_HDI_Group != New_UNDP_HDI_Group) %>% 
   arrange(Country)
@@ -229,4 +237,4 @@ addWorksheet(book, "World_Bank_Groupings")
 writeData(book, sheet = "World_Bank_Groupings", 
           x = wb, headerStyle = hs)
 
-saveWorkbook(book, "Codes_Masterlist.xlsx", overwrite = TRUE)
+saveWorkbook(book, "Codes_Crosswalk.xlsx", overwrite = TRUE)
